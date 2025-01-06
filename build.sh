@@ -6,4 +6,9 @@ set -e
 
 rustc src/interpreter.rs
 
+# -C opt-level=3
+
 ./interpreter
+
+# strip interpreter
+# ls -l interpreter
