@@ -3,8 +3,8 @@
 #![allow(unused_mut)]
 #![allow(unused_assignments)]
 
+// TODO: use chars array instead of String to optimaze the Lexer.
 
-// The main change that has to be do it is to use chars array instead of String to optimaze the Lexer.
 use std::collections::HashMap;
 
 struct Lexer
@@ -20,44 +20,10 @@ struct Interpreter
 {
     ast: Vec<Token>,
     variables: HashMap<String, Value>,
-    last_op: usize,
+    op: Vec<usize>,
     position: usize,
     result: Vec<Token>
 }
-
-// struct Parser<'a>
-// {
-//     expr: Vec<Token>,
-//     position: usize,
-//     ast: Vec<ASTNode<'a>>
-// }
-
-// enum ASTNode<'a>
-// {
-//     STRING(String),
-//     VARIABLE(String),
-//     NUMBER(u32),
-//     OP(&'a ASTNode<'a>),
-//     ERROR,
-//     BINARYOP
-//     {
-//         operator: Token,
-//         operand1: &'a ASTNode<'a>,
-//         operand2: &'a ASTNode<'a>,
-//     },
-//     UNARYOP
-//     {
-//         operator: Token,
-//         operand1: &'a ASTNode<'a>,
-//     },
-//     ASIGNMENT
-//     {
-//         identifier: String,
-//         // TODO!
-//         value: u32,
-//     }
-
-// }
 
 enum Value
 {
@@ -74,6 +40,7 @@ enum Token
     MUL,
     DIV,
     FN,
+    NEGATIVE,
     OPENPARENTHESIS,
     CLOSEPARENTHESIS,
     LET,
@@ -82,7 +49,7 @@ enum Token
     NEWLINE,
     STRING(String),
     VARIABLE(String),
-    U32(u32),
+    I32(i32),
     OUTOFBOUNDS,
 }
 
@@ -91,6 +58,10 @@ enum Token
 // This only works with int
 fn is_number(v: &Vec<char>) -> bool
 {
+    if v[0] == '-'
+    {
+        return v[1..].iter().all(|&c| c.is_digit(10));
+    }
     v.iter().all(|&c| c.is_digit(10))
 }
 
@@ -103,6 +74,23 @@ impl Lexer
         let token: Option<Token>;
         match self.c {
             '+' => token = Some(Token::ADD),
+            '-' =>
+            {
+                if self.read_char() == false {return Some(Token::NONE)};
+                // To differentiate between minus and substract
+                if self.c == ' '
+                {
+                    self.position -= 1;
+                    token = Some(Token::SUB);
+                }
+                else
+                {
+                    token = Some(Token::NEGATIVE);
+
+                }
+            }
+            '*' => token = Some(Token::MUL),
+            '/' => token = Some(Token::DIV),
             ' ' => token = Some(self.next_token()),
             '\0' => token = Some(Token::NONE),
             '\n' => token = Some(Token::NEWLINE),
@@ -115,14 +103,21 @@ impl Lexer
 
     fn next_token(&mut self) -> Token {
 
+        let mut buffer: Vec<char> = Vec::new();
+
         // Single char Tokens
         if let Some(token) = self.single_char_token() {
-            return token;
+            if token == Token::NEGATIVE
+            {
+                buffer.push('-');
+            }
+            else
+            {
+                return token;
+            }
         }
 
-
         // Multiple chars tokens
-        let mut buffer: Vec<char> = Vec::new();
         buffer.push(self.c);
 
         loop
@@ -151,14 +146,13 @@ impl Lexer
         if buffer.len() != 0
         {
             let s: String = buffer.iter().collect();
-
             // Numbers
             if is_number(&buffer)
             {
-
-                return Token::U32(s.parse::<u32>().unwrap());
+                return Token::I32(s.parse::<i32>().unwrap());
             }
 
+            // Multi-char reserved words
             match s.as_str()
             {
                 "let" => return Token::LET,
@@ -170,10 +164,11 @@ impl Lexer
         }
 
 
+
         Token::NONE
     }
 
-    // Change the bool for a custom token
+    // TODO: change the bool for a custom token
     fn read_char(&mut self) -> bool
     {
         if self.position >= self.source.len()
@@ -185,16 +180,6 @@ impl Lexer
 
 
         true
-    }
-
-    fn sum(&mut self) -> Option<u32>
-    {
-        for exp in &self.expr
-        {
-
-        }
-
-        Some(32)
     }
 
     fn read(&mut self)
@@ -219,78 +204,6 @@ impl Lexer
 
 }
 
-// fn extract_u32(token: &Token) -> Option<u32> {
-//     if let Token::U32(value) = token {
-//         Some(*value)
-//     } else {
-//         None
-//     }
-// }
-// impl Parser<'_>
-// {
-//     fn parse(&mut self)
-//     {
-//         let mut temp: Vec<ASTNode> = Vec::new();
-
-//         loop
-//         {
-//             if let Some(token) = self.next_token()
-//             {
-//                 match token
-//                 {
-//                     Token::OPENPARENTHESIS => self.parse(),
-//                     Token::ADD =>
-//                     {
-//                         let operand1 = self.next_token().unwrap_or(Token::ERROR);
-//                         let operand2 = self.next_token().unwrap_or(Token::ERROR);
-//                         match (operand1, operand2)
-//                         {
-//                             (Token::U32(value1), Token::U32(value2)) =>
-//                             {
-//                                 let ast_temp = ASTNode::BINARYOP
-//                                 {
-//                                     operator: Token::ADD,
-//                                     operand1: &ASTNode::NUMBER(value1),
-//                                     operand2: &ASTNode::NUMBER(value2)
-//                                 };
-//                                 temp.push(ast_temp);
-//                             }
-//                             _ => ()
-//                         }
-
-//                             // let ast_temp = ASTNode
-//                             // {
-//                             //     operator: Token::ADD,
-//                             //     operand1: ASTNode::NUMBER(self.next_token()),
-//                             //     operand2: ASTNode::NUMBER(self.next_token())
-//                             // }
-
-
-//                     }
-//                     _ => ()
-//                 }
-//             }
-//             else
-//             {
-//                 break;
-//             }
-//         }
-
-
-//     }
-
-//     fn next_token(&mut self) -> Option<Token>
-//     {
-//         if self.position >= self.expr.len() {
-//             return None;
-//         }
-//         let old_position = self.position;
-//         self.position += 1;
-//         Some(self.expr[old_position].clone())
-//     }
-
-// }
-
 
 
 impl Interpreter
@@ -298,63 +211,98 @@ impl Interpreter
 
     fn eval(&mut self)
     {
-        println!("{:?}", self.ast);
         while let Some(token) = self.next_token()
         {
+
             match token
             {
-                Token::ADD => self.last_op = self.position - 1,
-                Token::U32(_) =>
+                Token::ADD => self.op.push(self.position),
+                Token::SUB => self.op.push(self.position),
+                Token::MUL => self.op.push(self.position),
+                Token::DIV => self.op.push(self.position),
+                Token::I32(_) =>
                 {
-                    loop
+                    println!("{:?}", self.ast);
+
+                    // println!("op: {:?}, position: {}", self.op, self.position);
+                    // println!("{:?}", self.ast[self.position]);
+                    if self.can_do_binary_operation()
+
                     {
-                        if self.can_do_binary_operation()
+                        self.perform_binary_operation();
+                        loop
                         {
-                            self.perform_binary_operation();
-                        }
-                        else
-                        {
-                            break;
+                            if self.can_do_binary_operation()
+                            {
+                                println!("{:?}", self.ast);
+                                self.perform_binary_operation();
+                            }
+                            else{break}
                         }
                     }
-
                 },
-                _ => ()
+                Token::OPENPARENTHESIS => {println!("OPENPARENTHESIS\n");},
+                Token::CLOSEPARENTHESIS => {println!("\nCLOSEPARENTHESIS");},
+                _ => {println!("ERROR");}
             }
-        }
-    }
-    fn perform_binary_operation(&mut self) {
-        println!(
-            "Doing calculations on position: {}, last_op: {}",
-            self.position, self.last_op
-        );
+            let position = self.position;
 
-        let v1 = if let Token::U32(num) = self.ast[self.position] { num } else { unreachable!() };
-        let v2 = if let Token::U32(num) = self.ast[self.position - 1] { num } else { unreachable!() };
+            self.position += 1;
+        }
+        println!("\nResult = {:?}", self.ast);
+    }
+
+    fn perform_binary_operation(&mut self) {
+        // println!("Doing calculations on position: {}, op: {}", self.position, self.op[self.op.len()-1]);
+
+        let v1 = if let Token::I32(num) = self.ast[self.position - 1] { num } else { unreachable!() };
+        let v2 = if let Token::I32(num) = self.ast[self.position] { num } else { unreachable!() };
 
         if self.ast[self.position - 2] == Token::ADD {
             let result = v1 + v2;
 
-            self.ast.remove(self.position - 1);
-            self.ast.remove(self.position - 2);
-            self.ast[self.position - 2] = Token::U32(result);
-            self.position -= 2;
-
-            println!("{:?}", self.ast);
+            self.relocate_position_binary_op(result);
         }
+        else if self.ast[self.position - 2] == Token::SUB {
+            let result = v1 - v2;
+
+            self.relocate_position_binary_op(result);
+        }
+        else if self.ast[self.position - 2] == Token::MUL {
+            let result = v1 * v2;
+
+            self.relocate_position_binary_op(result);
+        }
+        else if self.ast[self.position - 2] == Token::DIV {
+            let result = v1 / v2;
+
+            self.relocate_position_binary_op(result);
+        }
+
+    }
+
+    fn relocate_position_binary_op(&mut self, result: i32)
+    {
+        self.ast.remove(self.position);
+        self.ast.remove(self.position - 1);
+        self.op.pop();
+        self.ast[self.position - 2] = Token::I32(result);
+        self.position -= 2;
     }
 
     fn can_do_binary_operation(&self /* Introduce here a type of binary operation*/ ) -> bool
     {
-        let mut is_var2_u32 = false;
+        let mut is_var2_i32 = false;
         match self.ast[self.position - 1]
         {
-            Token::U32(_) => {is_var2_u32 = true;}
+            Token::I32(_) => {is_var2_i32 = true;}
             _ => {return false;}
         }
 
-        if self.position - 2 == self.last_op && is_var2_u32
+        // Maybe error here !
+        if self.position - 2 == self.op[self.op.len()-1] && is_var2_i32
         {
+            // println!("El op es: {:?}", self.op);
             return true;
         }
 
@@ -366,9 +314,7 @@ impl Interpreter
         if self.position >= self.ast.len() {
             return None;
         }
-        let old_position = self.position;
-        self.position += 1;
-        Some(&self.ast[old_position])
+        Some(&self.ast[self.position])
     }
 }
 
@@ -392,30 +338,16 @@ fn main() -> io::Result<()> {
         source: code.chars().collect(),
         position: 0,
         c: ' ',
-        unique_chars: vec!['+', '(', ')'],
+        unique_chars: vec!['(', ')', '+', '-', '*', '/'],
     };
 
     lex.read();
-
-    // for i in &lex.expr
-    // {
-    //     println!("{:?}", i);
-    // }
-
-    // let mut parser = Parser
-    // {
-    //     expr: lex.expr,
-    //     position: 0,
-    //     ast: Vec::new()
-    // };
-
-    // parser.parse();
 
     let mut interpr = Interpreter
     {
         ast: lex.expr,
         variables: HashMap::new(),
-        last_op: 0,
+        op: Vec::new(),
         position: 0,
         result: Vec::new()
     };
